@@ -9,51 +9,53 @@
       margin: 0;
       background: linear-gradient(to bottom, #fff0f0, #ffd6d6);
       overflow: hidden;
+      position: relative;
+      height: 100vh;
       display: flex;
       justify-content: center;
       align-items: center;
-      height: 100vh;
-      flex-direction: column;
       font-family: 'Cursive', sans-serif;
     }
 
     h1 {
+      position: relative;
+      z-index: 10;
+      margin: 0;
       font-size: 4rem;
       color: #b71c1c;
-      animation: write 4s steps(10) forwards;
-      white-space: nowrap;
-      overflow: hidden;
-      border-right: 2px solid #b71c1c;
-    }
-
-    @keyframes write {
-      from { width: 0; }
-      to { width: 6ch; }
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
     }
 
     .flower {
       position: absolute;
-      width: 40px;
-      height: 40px;
-      animation: grow 4s ease-in-out forwards;
-      transform: scale(0);
+      width: 60px;
+      height: 60px;
+      opacity: 0;
+      transform: scale(0) rotate(0deg);
+      animation: grow 1s ease-out forwards;
+      z-index: 5;
     }
 
     @keyframes grow {
-      to { transform: scale(1); }
+      to {
+        opacity: 1;
+        transform: scale(1) rotate(var(--rot));
+      }
     }
   </style>
 </head>
 <body>
-  <!-- SVG symbol for flower petals -->
+  <!-- Hidden SVG definition for the flower -->
   <svg style="display:none;">
-    <symbol id="flower-symbol" viewBox="0 0 100 100">
-      <circle cx="50" cy="30" r="15" fill="#ff5252" />
-      <circle cx="70" cy="50" r="15" fill="#ff5252" />
-      <circle cx="50" cy="70" r="15" fill="#ff5252" />
-      <circle cx="30" cy="50" r="15" fill="#ff5252" />
-      <circle cx="50" cy="50" r="10" fill="#c62828" />
-    </symbol>
+    <defs>
+      <g id="flower-shape">
+        <circle cx="50" cy="20" r="15" fill="#ff5252" />
+        <circle cx="80" cy="50" r="15" fill="#ff5252" />
+        <circle cx="50" cy="80" r="15" fill="#ff5252" />
+        <circle cx="20" cy="50" r="15" fill="#ff5252" />
+        <circle cx="50" cy="50" r="12" fill="#c62828" />
+      </g>
+    </defs>
   </svg>
 
   <h1>Sofia</h1>
@@ -62,23 +64,28 @@
     const centerX = window.innerWidth / 2;
     const centerY = window.innerHeight / 2;
 
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 20; i++) {
       const svg = document.createElementNS(NS, 'svg');
-      svg.setAttribute('class', 'flower');
+      svg.classList.add('flower');
       svg.setAttribute('viewBox', '0 0 100 100');
 
       const use = document.createElementNS(NS, 'use');
-      use.setAttributeNS('http://www.w3.org/1999/xlink', 'href', '#flower-symbol');
+      // Use the defined flower shape
+      use.setAttribute('href', '#flower-shape');
       svg.appendChild(use);
 
       const angle = Math.random() * Math.PI * 2;
       const radius = 80 + Math.random() * 100;
-      const x = centerX + radius * Math.cos(angle);
-      const y = centerY + radius * Math.sin(angle);
-
+      // center offset to align the SVG
+      const x = centerX + radius * Math.cos(angle) - 30;
+      const y = centerY + radius * Math.sin(angle) - 30;
       svg.style.left = `${x}px`;
       svg.style.top = `${y}px`;
-      svg.style.animationDelay = `${Math.random() * 2}s`;
+
+      // random rotation
+      svg.style.setProperty('--rot', Math.random() * 360 + 'deg');
+      // stagger appearance
+      svg.style.animationDelay = `${i * 0.15}s`;
 
       document.body.appendChild(svg);
     }
