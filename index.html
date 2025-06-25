@@ -33,12 +33,28 @@
 
     .flower {
       position: absolute;
-      width: 20px;
-      height: 20px;
-      background: radial-gradient(circle, #ff5252 30%, #c62828 70%);
-      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      background: none;
       animation: grow 4s ease-in-out forwards;
       transform: scale(0);
+    }
+
+    .flower::before, .flower::after {
+      content: '';
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle, #ff5252 40%, #c62828 80%);
+      border-radius: 50%;
+    }
+
+    .flower::before {
+      transform: rotate(45deg);
+    }
+
+    .flower::after {
+      transform: rotate(-45deg);
     }
 
     @keyframes grow {
@@ -51,7 +67,6 @@
 <body>
   <h1>Sofia</h1>
   <script>
-    // Create growing red flowers around the name
     const centerX = window.innerWidth / 2;
     const centerY = window.innerHeight / 2;
 
