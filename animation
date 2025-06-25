@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sofia's Flowers</title>
+  <style>
+    body {
+      margin: 0;
+      background: linear-gradient(to bottom, #fdf6f0, #fce4ec);
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      flex-direction: column;
+      font-family: 'Cursive', sans-serif;
+    }
+
+    h1 {
+      font-size: 4rem;
+      color: #e91e63;
+      animation: write 4s steps(10) forwards;
+      white-space: nowrap;
+      overflow: hidden;
+      border-right: 2px solid #e91e63;
+    }
+
+    @keyframes write {
+      from { width: 0; }
+      to { width: 8ch; }
+    }
+
+    .flower {
+      position: absolute;
+      width: 50px;
+      height: 50px;
+      background: radial-gradient(circle, pink 30%, deeppink 70%);
+      border-radius: 50%;
+      animation: float 6s infinite ease-in-out;
+    }
+
+    @keyframes float {
+      0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(-100vh) rotate(360deg); opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+  <h1>Sofia</h1>
+  <script>
+    // Generate floating flowers
+    for (let i = 0; i < 20; i++) {
+      const flower = document.createElement('div');
+      flower.classList.add('flower');
+      flower.style.left = Math.random() * 100 + 'vw';
+      flower.style.bottom = Math.random() * -100 + 'px';
+      flower.style.animationDuration = 4 + Math.random() * 4 + 's';
+      flower.style.opacity = Math.random();
+      document.body.appendChild(flower);
+    }
+  </script>
+</body>
+</html>
