@@ -1,94 +1,94 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sofia's Flowers</title>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sofia's Roses</title>
   <style>
     body {
       margin: 0;
-      background: linear-gradient(to bottom, #fff0f0, #ffd6d6);
+      background: linear-gradient(to bottom, #fef6f6, #fde4e4);
       overflow: hidden;
-      position: relative;
       height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
+      position: relative;
       font-family: 'Cursive', sans-serif;
     }
-
     h1 {
-      position: relative;
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
       z-index: 10;
       margin: 0;
       font-size: 4rem;
-      color: #b71c1c;
-      text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+      color: #b31b1b;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.15);
     }
-
     .flower {
       position: absolute;
-      width: 60px;
-      height: 60px;
-      opacity: 0;
-      transform: scale(0) rotate(0deg);
-      animation: grow 1s ease-out forwards;
+      width: 80px;
+      height: 120px;
+      overflow: visible;
       z-index: 5;
     }
-
-    @keyframes grow {
-      to {
-        opacity: 1;
-        transform: scale(1) rotate(var(--rot));
-      }
-    }
+    .stem { fill: #3a6b35; transition: y 0.8s ease-out, height 0.8s ease-out; }
+    .petal { fill: #ffccd5; transition: rx 0.6s ease-out 0.2s, ry 0.6s ease-out 0.2s; }
+    .center { fill: #d32f2f; transition: r 0.6s ease-out 0.2s; }
   </style>
 </head>
 <body>
-  <!-- Hidden SVG definition for the flower -->
-  <svg style="display:none;">
+  <h1>Sofia</h1>
+  <svg width="0" height="0" style="position:absolute; visibility:hidden;">
     <defs>
-      <g id="flower-shape">
-        <circle cx="50" cy="20" r="15" fill="#ff5252" />
-        <circle cx="80" cy="50" r="15" fill="#ff5252" />
-        <circle cx="50" cy="80" r="15" fill="#ff5252" />
-        <circle cx="20" cy="50" r="15" fill="#ff5252" />
-        <circle cx="50" cy="50" r="12" fill="#c62828" />
-      </g>
+      <symbol id="rose" viewBox="-10 -20 120 160">
+        <rect class="stem" x="48" y="120" width="4" height="0"/>
+        <!-- petals -->
+        <ellipse class="petal" cx="50" cy="40" rx="0" ry="0" transform="rotate(0 50 50)"/>
+        <ellipse class="petal" cx="50" cy="40" rx="0" ry="0" transform="rotate(45 50 50)"/>
+        <ellipse class="petal" cx="50" cy="40" rx="0" ry="0" transform="rotate(90 50 50)"/>
+        <ellipse class="petal" cx="50" cy="40" rx="0" ry="0" transform="rotate(135 50 50)"/>
+        <ellipse class="petal" cx="50" cy="40" rx="0" ry="0" transform="rotate(180 50 50)"/>
+        <ellipse class="petal" cx="50" cy="40" rx="0" ry="0" transform="rotate(225 50 50)"/>
+        <ellipse class="petal" cx="50" cy="40" rx="0" ry="0" transform="rotate(270 50 50)"/>
+        <ellipse class="petal" cx="50" cy="40" rx="0" ry="0" transform="rotate(315 50 50)"/>
+        <circle class="center" cx="50" cy="50" r="0"/>
+      </symbol>
     </defs>
   </svg>
-
-  <h1>Sofia</h1>
   <script>
-    const NS = 'http://www.w3.org/2000/svg';
-    const centerX = window.innerWidth / 2;
-    const centerY = window.innerHeight / 2;
+    const positions = [0, 60, 120, 180, 240, 300]; // angles in degrees
+    const w = window.innerWidth, h = window.innerHeight;
+    const cx = w/2, cy = h/2;
+    const radius = Math.min(cx, cy) - 80;
 
-    for (let i = 0; i < 20; i++) {
-      const svg = document.createElementNS(NS, 'svg');
-      svg.classList.add('flower');
-      svg.setAttribute('viewBox', '0 0 100 100');
+    positions.forEach((deg, idx) => {
+      const rad = deg * Math.PI / 180;
+      const tx = cx + radius * Math.cos(rad) - 40;
+      const ty = cy + radius * Math.sin(rad) - 60;
+      const delay = 500 + idx * 400;
 
-      const use = document.createElementNS(NS, 'use');
-      // Use the defined flower shape
-      use.setAttribute('href', '#flower-shape');
+      const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+      svg.setAttribute('class','flower');
+      svg.setAttribute('viewBox','-10 -20 120 160');
+      svg.setAttribute('width','80');
+      svg.setAttribute('height','120');
+      svg.style.left = `${tx}px`;
+      svg.style.top = `${h}px`; // start at bottom of viewport
+
+      const use = document.createElementNS('http://www.w3.org/2000/svg','use');
+      use.setAttributeNS('http://www.w3.org/1999/xlink','href','#rose');
       svg.appendChild(use);
-
-      const angle = Math.random() * Math.PI * 2;
-      const radius = 80 + Math.random() * 100;
-      // center offset to align the SVG
-      const x = centerX + radius * Math.cos(angle) - 30;
-      const y = centerY + radius * Math.sin(angle) - 30;
-      svg.style.left = `${x}px`;
-      svg.style.top = `${y}px`;
-
-      // random rotation
-      svg.style.setProperty('--rot', Math.random() * 360 + 'deg');
-      // stagger appearance
-      svg.style.animationDelay = `${i * 0.15}s`;
-
       document.body.appendChild(svg);
-    }
+
+      // animate growth
+      setTimeout(() => {
+        svg.style.transition = 'top 0.8s ease-out';
+        svg.style.top = `${ty + 60}px`; // raise so stem bottom aligns
+        const stem = svg.querySelector('.stem');
+        stem.setAttribute('y','60'); stem.setAttribute('height','60');
+        svg.querySelectorAll('.petal').forEach(p => { p.setAttribute('rx','12'); p.setAttribute('ry','30'); });
+        svg.querySelector('.center').setAttribute('r','12');
+      }, delay);
+    });
   </script>
 </body>
 </html>
