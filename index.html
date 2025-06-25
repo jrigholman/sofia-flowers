@@ -7,7 +7,7 @@
   <style>
     body {
       margin: 0;
-      background: linear-gradient(to bottom, #fdf6f0, #fce4ec);
+      background: linear-gradient(to bottom, #fff0f0, #ffd6d6);
       overflow: hidden;
       display: flex;
       justify-content: center;
@@ -19,44 +19,56 @@
 
     h1 {
       font-size: 4rem;
-      color: #e91e63;
+      color: #b71c1c;
       animation: write 4s steps(10) forwards;
       white-space: nowrap;
       overflow: hidden;
-      border-right: 2px solid #e91e63;
+      border-right: 2px solid #b71c1c;
     }
 
     @keyframes write {
       from { width: 0; }
-      to { width: 8ch; }
+      to { width: 6ch; }
     }
 
     .flower {
       position: absolute;
-      width: 50px;
-      height: 50px;
-      background: radial-gradient(circle, pink 30%, deeppink 70%);
+      width: 20px;
+      height: 20px;
+      background: radial-gradient(circle, #ff5252 30%, #c62828 70%);
       border-radius: 50%;
-      animation: float 6s infinite ease-in-out;
+      animation: grow 4s ease-in-out forwards;
+      transform: scale(0);
     }
 
-    @keyframes float {
-      0% { transform: translateY(0) rotate(0deg); opacity: 1; }
-      100% { transform: translateY(-100vh) rotate(360deg); opacity: 0; }
+    @keyframes grow {
+      to {
+        transform: scale(1);
+      }
     }
   </style>
 </head>
 <body>
   <h1>Sofia</h1>
   <script>
-    // Generate floating flowers
-    for (let i = 0; i < 20; i++) {
+    // Create growing red flowers around the name
+    const centerX = window.innerWidth / 2;
+    const centerY = window.innerHeight / 2;
+
+    for (let i = 0; i < 30; i++) {
       const flower = document.createElement('div');
       flower.classList.add('flower');
-      flower.style.left = Math.random() * 100 + 'vw';
-      flower.style.bottom = Math.random() * -100 + 'px';
-      flower.style.animationDuration = 4 + Math.random() * 4 + 's';
-      flower.style.opacity = Math.random();
+
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 80 + Math.random() * 100;
+
+      const x = centerX + radius * Math.cos(angle);
+      const y = centerY + radius * Math.sin(angle);
+
+      flower.style.left = `${x}px`;
+      flower.style.top = `${y}px`;
+      flower.style.animationDelay = `${Math.random() * 2}s`;
+
       document.body.appendChild(flower);
     }
   </script>
