@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Sofia Flowers • Minimal Revamp</title>
   <style>
     :root{
@@ -24,7 +24,7 @@
 </head>
 <body>
   <div id="stage">
-    <svg id="scene" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice" aria-label="Flower ring with gentle motion" role="img"></svg>
+    <svg id="scene" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice" aria-label="Flower ring with gentle motion" role="img" shape-rendering="optimizeSpeed"></svg>
     <div class="centerwrap">
       <div style="position:relative">
         <div class="halo" aria-hidden="true"></div>
@@ -35,9 +35,9 @@
 
   <script>
     // Minimal revamp focused on subtle animation and layout similar to a static ring
+    // Smoothing: RAF delta time + per-flower critically damped interpolation to kill jitter on phones.
     const svgNS = 'http://www.w3.org/2000/svg';
 
-    // Feel free to tweak these to match your original exactly
     const CONFIG = {
       count: 12,          // number of flowers around the name
       petals: 8,          // petals per flower
@@ -45,10 +45,11 @@
       petalLen: 11.5,     // petal length
       petalWidth: 5.5,    // petal width
       baseScale: 1,       // base scale of each flower
-      orbitJitter: 0,   // tiny radial drift amount
-      swayDeg: 0,       // gentle rotation sway
-      pulse: 0.0,        // subtle scale pulse
-      speed: 0.0          // global speed multiplier
+      orbitJitter: 1.0,   // tiny radial drift amount
+      swayDeg: 3.2,       // gentle rotation sway
+      pulse: 0.03,        // subtle scale pulse
+      speed: 0.5,         // global speed multiplier
+      smooth: 0.18        // smoothing factor (0..1). Higher is snappier
     };
 
     const scene = document.getElementById('scene');
@@ -63,7 +64,7 @@
       filt.appendChild(el('feGaussianBlur',{in:'SourceAlpha',stdDeviation:'0.6'}));
       const m = el('feMerge'); m.appendChild(el('feMergeNode')); m.appendChild(el('feMergeNode',{in:'SourceGraphic'}));
       filt.appendChild(m); defs.appendChild(filt);
-      // petal gradient (quoted hyphenated keys to avoid the token error)
+      // petal gradient (quoted hyphenated keys)
       const grad = el('radialGradient',{id:'petalGrad',cx:'50%',cy:'38%',r:'80%'});
       grad.appendChild(el('stop',{offset:'0%','stop-color':'#ffffff','stop-opacity':'.9'}));
       grad.appendChild(el('stop',{offset:'60%','stop-color':'#ffffff','stop-opacity':'.35'}));
@@ -80,7 +81,6 @@
         const a = i/petals*360;
         const p = el('path',{d:petalPath(CONFIG.petalLen,CONFIG.petalWidth),fill:'url(#petalGrad)',stroke:c1,'stroke-width':'0.22',opacity:'0.95'});
         const layer = el('g'); layer.appendChild(p); setT(layer,0,0,1,a); g.appendChild(layer);
-        // light body tint overlay
         const overlay = p.cloneNode(); overlay.removeAttribute('filter'); overlay.setAttribute('fill',c2); overlay.setAttribute('opacity','0.25'); g.appendChild(overlay);
       }
       g.appendChild(el('circle',{cx:0,cy:0,r:1.6,fill:c3}));
@@ -99,6 +99,8 @@
         const y=cy+Math.sin(theta)*CONFIG.ringRadius*0.82; // slight ellipse like the original
         const f=makeFlower(CONFIG.petals,c1,c2,c3);
         f.__theta=theta; f.__phase=Math.random()*Math.PI*2; f.__base={x,y}; f.__rot=Math.random()*360;
+        // smoothing state
+        f.__sm={x,y,s:CONFIG.baseScale,r:0};
         setT(f,x,y,CONFIG.baseScale,0);
         scene.appendChild(f);
       }
@@ -106,19 +108,29 @@
 
     function getCSS(varName){return getComputedStyle(document.documentElement).getPropertyValue(varName).trim()}
 
-    // gentle animation
+    // critically damped smoothing factor normalized to fps
+    function smooth(prev, target, dt, k){ const a = 1 - Math.pow(1 - k, Math.max(1, dt*60)); return prev + (target - prev) * a; }
+
     let t0=performance.now();
     function tick(now){
-      const t=(now-t0)/1000*CONFIG.speed;
+      const dt = Math.min(0.05, (now - t0)/1000) * CONFIG.speed; // cap big jumps
+      t0 = now;
+      const t = now*0.001*CONFIG.speed;
       const flowers=scene.querySelectorAll('.flower');
       flowers.forEach((f,idx)=>{
         const base=f.__base; const phase=f.__phase; const th=f.__theta;
         const drift=CONFIG.orbitJitter*Math.sin(t*0.6+phase);
-        const x=base.x+Math.cos(th)*(drift);
-        const y=base.y+Math.sin(th)*(drift*0.82);
-        const rot=CONFIG.swayDeg*Math.sin(t*0.9+phase);
-        const s=CONFIG.baseScale*(1+CONFIG.pulse*Math.sin(t*0.8+phase+idx*0.15));
-        setT(f,x,y,s,rot);
+        const tx=base.x+Math.cos(th)*(drift);
+        const ty=base.y+Math.sin(th)*(drift*0.82);
+        const trot=CONFIG.swayDeg*Math.sin(t*0.9+phase);
+        const ts=CONFIG.baseScale*(1+CONFIG.pulse*Math.sin(t*0.8+phase+idx*0.15));
+        // smooth to targets
+        const sm=f.__sm; const k=CONFIG.smooth;
+        sm.x = smooth(sm.x, tx, dt, k);
+        sm.y = smooth(sm.y, ty, dt, k);
+        sm.r = smooth(sm.r, trot, dt, k);
+        sm.s = smooth(sm.s, ts, dt, k);
+        setT(f, sm.x, sm.y, sm.s, sm.r);
       });
       requestAnimationFrame(tick);
     }
@@ -137,11 +149,6 @@
     setup();
     requestAnimationFrame(tick);
     requestAnimationFrame(()=>setTimeout(runTests,50));
-
-    // small conveniences
-    window.addEventListener('keydown',e=>{ if(e.code==='Space'){ // pause toggle
-      if(window.__paused){window.__paused=false; requestAnimationFrame(tick)} else {window.__paused=true; const _tick=tick; tick=function(){}; setTimeout(()=>{tick=_tick},0)}
-    }});
   </script>
 </body>
 </html>
