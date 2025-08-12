@@ -5,12 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Sofia Flowers • Minimal Revamp</title>
   <style>
-    :root{
-      --bg1:#0b0f1a; --bg2:#11162a; --text:#f6f7fb;
-      --c1:#ff6fa5;  /* primary petal stroke */
-      --c2:#ffd5e6;  /* petal body */
-      --c3:#ffe39b;  /* flower center */
-    }
+    :root{ --bg1:#0b0f1a; --bg2:#11162a; --text:#f6f7fb; --c1:#ff6fa5; --c2:#ffd5e6; --c3:#ffe39b; }
     html,body{height:100%;margin:0;background:linear-gradient(180deg,var(--bg1),var(--bg2));color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;overflow:hidden}
     #stage{position:fixed;inset:0;display:grid;place-items:center}
     #scene{position:absolute;inset:0;width:100%;height:100%}
@@ -18,7 +13,6 @@
     .name{font-size:clamp(36px,6vw,90px);font-weight:700;letter-spacing:.02em;text-align:center;text-shadow:0 0 8px rgba(255,255,255,.12)}
     .halo{position:absolute;width:36vmin;height:36vmin;border-radius:50%;left:50%;top:50%;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(255,180,220,.16),rgba(255,180,220,0) 70%);filter:blur(26px);animation:halo 6s ease-in-out infinite}
     @keyframes halo{0%,100%{transform:translate(-50%,-50%) scale(.96);opacity:.9}50%{transform:translate(-50%,-50%) scale(1.02);opacity:1}}
-    /* reduce motion */
     @media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
   </style>
 </head>
@@ -34,37 +28,36 @@
   </div>
 
   <script>
-    // Minimal revamp focused on subtle animation and layout similar to a static ring
-    // Smoothing: RAF delta time + per-flower critically damped interpolation to kill jitter on phones.
+    // Minimal look, smoother motion. No UI or bokeh.
     const svgNS = 'http://www.w3.org/2000/svg';
+    const isCoarse = matchMedia('(pointer: coarse)').matches;
 
     const CONFIG = {
-      count: 12,          // number of flowers around the name
+      count: 12,          // flowers in the ring
       petals: 8,          // petals per flower
-      ringRadius: 28,     // distance from center (svg units)
-      petalLen: 11.5,     // petal length
-      petalWidth: 5.5,    // petal width
-      baseScale: 1,       // base scale of each flower
-      orbitJitter: 1.0,   // tiny radial drift amount
-      swayDeg: 3.2,       // gentle rotation sway
-      pulse: 0.03,        // subtle scale pulse
-      speed: 0.5,         // global speed multiplier
-      smooth: 0.18        // smoothing factor (0..1). Higher is snappier
+      ringRadius: 28,     // base radius
+      petalLen: 11.5,
+      petalWidth: 5.5,
+      baseScale: 1,
+      orbitJitter: 1.0,   // small radial drift
+      swayDeg: 3.0,       // rotation sway
+      pulse: 0.03,        // scale pulse
+      speed: 0.5,         // global speed
+      smooth: 0.26        // smoothing (0..1) higher = snappier
     };
 
     const scene = document.getElementById('scene');
+    const TAU = Math.PI * 2;
 
     function el(name, attrs={}){const e=document.createElementNS(svgNS,name);for(const k in attrs){e.setAttribute(k,attrs[k])}return e}
-    function setT(node,x,y,s=1,r=0){node.setAttribute('transform',`translate(${x.toFixed(3)} ${y.toFixed(3)}) rotate(${r.toFixed(2)}) scale(${s.toFixed(4)})`)}
+    function setT(node,x,y,s=1,r=0){node.setAttribute('transform',`translate(${x.toFixed(2)} ${y.toFixed(2)}) rotate(${r.toFixed(2)}) scale(${s.toFixed(3)})`)}
 
     function buildDefs(){
       const defs = el('defs');
-      // soft shadow
       const filt = el('filter',{id:'soft',x:'-50%',y:'-50%',width:'200%',height:'200%'});
       filt.appendChild(el('feGaussianBlur',{in:'SourceAlpha',stdDeviation:'0.6'}));
       const m = el('feMerge'); m.appendChild(el('feMergeNode')); m.appendChild(el('feMergeNode',{in:'SourceGraphic'}));
       filt.appendChild(m); defs.appendChild(filt);
-      // petal gradient (quoted hyphenated keys)
       const grad = el('radialGradient',{id:'petalGrad',cx:'50%',cy:'38%',r:'80%'});
       grad.appendChild(el('stop',{offset:'0%','stop-color':'#ffffff','stop-opacity':'.9'}));
       grad.appendChild(el('stop',{offset:'60%','stop-color':'#ffffff','stop-opacity':'.35'}));
@@ -79,7 +72,10 @@
       const g = el('g',{class:'flower',filter:'url(#soft)'});
       for(let i=0;i<petals;i++){
         const a = i/petals*360;
-        const p = el('path',{d:petalPath(CONFIG.petalLen,CONFIG.petalWidth),fill:'url(#petalGrad)',stroke:c1,'stroke-width':'0.22',opacity:'0.95'});
+        const p = el('path',{
+          d:petalPath(CONFIG.petalLen,CONFIG.petalWidth),
+          fill:'url(#petalGrad)',stroke:c1,'stroke-width':'0.22',opacity:'0.95','vector-effect':'non-scaling-stroke'
+        });
         const layer = el('g'); layer.appendChild(p); setT(layer,0,0,1,a); g.appendChild(layer);
         const overlay = p.cloneNode(); overlay.removeAttribute('filter'); overlay.setAttribute('fill',c2); overlay.setAttribute('opacity','0.25'); g.appendChild(overlay);
       }
@@ -94,55 +90,55 @@
       const c2=getCSS('--c2')||'#ffd5e6';
       const c3=getCSS('--c3')||'#ffe39b';
       for(let i=0;i<CONFIG.count;i++){
-        const theta=i/CONFIG.count*Math.PI*2;
-        const x=cx+Math.cos(theta)*CONFIG.ringRadius;
-        const y=cy+Math.sin(theta)*CONFIG.ringRadius*0.82; // slight ellipse like the original
+        const theta=i/CONFIG.count*TAU;
+        const cosT=Math.cos(theta), sinT=Math.sin(theta);
+        const x=cx+cosT*CONFIG.ringRadius;
+        const y=cy+sinT*CONFIG.ringRadius*0.82; // slight ellipse like original
         const f=makeFlower(CONFIG.petals,c1,c2,c3);
-        f.__theta=theta; f.__phase=Math.random()*Math.PI*2; f.__base={x,y}; f.__rot=Math.random()*360;
-        // smoothing state
-        f.__sm={x,y,s:CONFIG.baseScale,r:0};
+        f.__base={x,y,cosT,sinT};
+        f.__phase=Math.random()*TAU;
+        f.__sm={x,y,s:CONFIG.baseScale,r:0}; // smoothed state
         setT(f,x,y,CONFIG.baseScale,0);
         scene.appendChild(f);
       }
     }
 
-    function getCSS(varName){return getComputedStyle(document.documentElement).getPropertyValue(varName).trim()}
+    function getCSS(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim()}
 
-    // critically damped smoothing factor normalized to fps
+    // smoothing helper with fps-normalized response
     function smooth(prev, target, dt, k){ const a = 1 - Math.pow(1 - k, Math.max(1, dt*60)); return prev + (target - prev) * a; }
 
-    let t0=performance.now();
+    let last=performance.now();
     function tick(now){
-      const dt = Math.min(0.05, (now - t0)/1000) * CONFIG.speed; // cap big jumps
-      t0 = now;
-      const t = now*0.001*CONFIG.speed;
+      let dt=(now-last)/1000; if(dt>0.05) dt=0.05; last=now;
+      const t=now*0.001*CONFIG.speed;
       const flowers=scene.querySelectorAll('.flower');
+      const jitter = CONFIG.orbitJitter*(isCoarse?0.8:1);
+      const sway = CONFIG.swayDeg*(isCoarse?0.85:1);
       flowers.forEach((f,idx)=>{
-        const base=f.__base; const phase=f.__phase; const th=f.__theta;
-        const drift=CONFIG.orbitJitter*Math.sin(t*0.6+phase);
-        const tx=base.x+Math.cos(th)*(drift);
-        const ty=base.y+Math.sin(th)*(drift*0.82);
-        const trot=CONFIG.swayDeg*Math.sin(t*0.9+phase);
-        const ts=CONFIG.baseScale*(1+CONFIG.pulse*Math.sin(t*0.8+phase+idx*0.15));
-        // smooth to targets
+        const {x:bx,y:by,cosT,sinT}=f.__base; const ph=f.__phase;
+        const drift=jitter*Math.sin(t*0.6+ph);
+        const tx=bx+cosT*drift; // move along radial direction
+        const ty=by+sinT*drift*0.82;
+        const trot=sway*Math.sin(t*0.9+ph);
+        const ts=CONFIG.baseScale*(1+CONFIG.pulse*Math.sin(t*0.8+ph+idx*0.15));
         const sm=f.__sm; const k=CONFIG.smooth;
-        sm.x = smooth(sm.x, tx, dt, k);
-        sm.y = smooth(sm.y, ty, dt, k);
-        sm.r = smooth(sm.r, trot, dt, k);
-        sm.s = smooth(sm.s, ts, dt, k);
-        setT(f, sm.x, sm.y, sm.s, sm.r);
+        sm.x=smooth(sm.x,tx,dt,k); sm.y=smooth(sm.y,ty,dt,k); sm.r=smooth(sm.r,trot,dt,k); sm.s=smooth(sm.s,ts,dt,k);
+        setT(f,sm.x,sm.y,sm.s,sm.r);
       });
       requestAnimationFrame(tick);
     }
 
-    // basic smoke tests, will log to console
+    // smoke tests
     function runTests(){
       const results=[]; const ok=(n,c)=>results.push({n,pass:!!c});
       ok('defs exist', !!document.querySelector('#scene defs'));
       ok('gradient stops=3', document.querySelectorAll('#scene defs #petalGrad stop').length===3);
       ok('hyphenated attr present', !!document.querySelector('#scene defs stop')?.getAttribute('stop-color'));
       ok('flower count correct', document.querySelectorAll('#scene .flower').length===CONFIG.count);
-      const failed=results.filter(r=>!r.pass); if(failed.length){console.group('Sofia Flowers tests'); results.forEach(r=>console[r.pass?'log':'error'](`${r.pass?'✔':'✖'} ${r.n}`)); console.groupEnd()} else {console.log('✔ Sofia Flowers tests passed')}
+      // animation sanity: transform changes over time
+      const f=document.querySelector('.flower'); const t0=f?.getAttribute('transform'); setTimeout(()=>{ const t1=f?.getAttribute('transform'); ok('transform updates', t0!==t1); log(); }, 250);
+      function log(){ const failed=results.filter(r=>!r.pass); if(failed.length){console.group('Sofia Flowers tests'); results.forEach(r=>console[r.pass?'log':'error'](`${r.pass?'✔':'✖'} ${r.n}`)); console.groupEnd()} else {console.log('✔ Sofia Flowers tests passed')} }
     }
 
     // init
