@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sofia Flowers • Minimal Revamp</title>
+  <style>
+    :root{
+      --bg1:#0b0f1a; --bg2:#11162a; --text:#f6f7fb;
+      --c1:#ff6fa5;  /* primary petal stroke */
+      --c2:#ffd5e6;  /* petal body */
+      --c3:#ffe39b;  /* flower center */
+    }
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,var(--bg1),var(--bg2));color:var(--text);font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;overflow:hidden}
+    #stage{position:fixed;inset:0;display:grid;place-items:center}
+    #scene{position:absolute;inset:0;width:100%;height:100%}
+    .centerwrap{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none}
+    .name{font-size:clamp(36px,6vw,90px);font-weight:700;letter-spacing:.02em;text-align:center;text-shadow:0 0 8px rgba(255,255,255,.12)}
+    .halo{position:absolute;width:36vmin;height:36vmin;border-radius:50%;left:50%;top:50%;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(255,180,220,.16),rgba(255,180,220,0) 70%);filter:blur(26px);animation:halo 6s ease-in-out infinite}
+    @keyframes halo{0%,100%{transform:translate(-50%,-50%) scale(.96);opacity:.9}50%{transform:translate(-50%,-50%) scale(1.02);opacity:1}}
+    /* reduce motion */
+    @media (prefers-reduced-motion: reduce){*,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}}
+  </style>
+</head>
+<body>
+  <div id="stage">
+    <svg id="scene" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice" aria-label="Flower ring with gentle motion" role="img"></svg>
+    <div class="centerwrap">
+      <div style="position:relative">
+        <div class="halo" aria-hidden="true"></div>
+        <div class="name" id="centerName">Sofia</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Minimal revamp focused on subtle animation and layout similar to a static ring
+    const svgNS = 'http://www.w3.org/2000/svg';
+
+    // Feel free to tweak these to match your original exactly
+    const CONFIG = {
+      count: 12,          // number of flowers around the name
+      petals: 8,          // petals per flower
+      ringRadius: 28,     // distance from center (svg units)
+      petalLen: 11.5,     // petal length
+      petalWidth: 5.5,    // petal width
+      baseScale: 1,       // base scale of each flower
+      orbitJitter: 1.1,   // tiny radial drift amount
+      swayDeg: 3.5,       // gentle rotation sway
+      pulse: 0.03,        // subtle scale pulse
+      speed: 0.5          // global speed multiplier
+    };
+
+    const scene = document.getElementById('scene');
+
+    function el(name, attrs={}){const e=document.createElementNS(svgNS,name);for(const k in attrs){e.setAttribute(k,attrs[k])}return e}
+    function setT(node,x,y,s=1,r=0){node.setAttribute('transform',`translate(${x.toFixed(3)} ${y.toFixed(3)}) rotate(${r.toFixed(2)}) scale(${s.toFixed(4)})`)}
+
+    function buildDefs(){
+      const defs = el('defs');
+      // soft shadow
+      const filt = el('filter',{id:'soft',x:'-50%',y:'-50%',width:'200%',height:'200%'});
+      filt.appendChild(el('feGaussianBlur',{in:'SourceAlpha',stdDeviation:'0.6'}));
+      const m = el('feMerge'); m.appendChild(el('feMergeNode')); m.appendChild(el('feMergeNode',{in:'SourceGraphic'}));
+      filt.appendChild(m); defs.appendChild(filt);
+      // petal gradient (quoted hyphenated keys to avoid the token error)
+      const grad = el('radialGradient',{id:'petalGrad',cx:'50%',cy:'38%',r:'80%'});
+      grad.appendChild(el('stop',{offset:'0%','stop-color':'#ffffff','stop-opacity':'.9'}));
+      grad.appendChild(el('stop',{offset:'60%','stop-color':'#ffffff','stop-opacity':'.35'}));
+      grad.appendChild(el('stop',{offset:'100%','stop-color':'#ffffff','stop-opacity':'0'}));
+      defs.appendChild(grad);
+      scene.appendChild(defs);
+    }
+
+    function petalPath(len,w){const h=len, half=w*0.5;return `M 0 0 C ${half} ${-h*0.18}, ${half} ${-h*0.62}, 0 ${-h} C ${-half} ${-h*0.62}, ${-half} ${-h*0.18}, 0 0 Z`}
+
+    function makeFlower(petals,c1,c2,c3){
+      const g = el('g',{class:'flower',filter:'url(#soft)'});
+      for(let i=0;i<petals;i++){
+        const a = i/petals*360;
+        const p = el('path',{d:petalPath(CONFIG.petalLen,CONFIG.petalWidth),fill:'url(#petalGrad)',stroke:c1,'stroke-width':'0.22',opacity:'0.95'});
+        const layer = el('g'); layer.appendChild(p); setT(layer,0,0,1,a); g.appendChild(layer);
+        // light body tint overlay
+        const overlay = p.cloneNode(); overlay.removeAttribute('filter'); overlay.setAttribute('fill',c2); overlay.setAttribute('opacity','0.25'); g.appendChild(overlay);
+      }
+      g.appendChild(el('circle',{cx:0,cy:0,r:1.6,fill:c3}));
+      return g;
+    }
+
+    function setup(){
+      buildDefs();
+      const cx=50, cy=50;
+      const c1=getCSS('--c1')||'#ff6fa5';
+      const c2=getCSS('--c2')||'#ffd5e6';
+      const c3=getCSS('--c3')||'#ffe39b';
+      for(let i=0;i<CONFIG.count;i++){
+        const theta=i/CONFIG.count*Math.PI*2;
+        const x=cx+Math.cos(theta)*CONFIG.ringRadius;
+        const y=cy+Math.sin(theta)*CONFIG.ringRadius*0.82; // slight ellipse like the original
+        const f=makeFlower(CONFIG.petals,c1,c2,c3);
+        f.__theta=theta; f.__phase=Math.random()*Math.PI*2; f.__base={x,y}; f.__rot=Math.random()*360;
+        setT(f,x,y,CONFIG.baseScale,0);
+        scene.appendChild(f);
+      }
+    }
+
+    function getCSS(varName){return getComputedStyle(document.documentElement).getPropertyValue(varName).trim()}
+
+    // gentle animation
+    let t0=performance.now();
+    function tick(now){
+      const t=(now-t0)/1000*CONFIG.speed;
+      const flowers=scene.querySelectorAll('.flower');
+      flowers.forEach((f,idx)=>{
+        const base=f.__base; const phase=f.__phase; const th=f.__theta;
+        const drift=CONFIG.orbitJitter*Math.sin(t*0.6+phase);
+        const x=base.x+Math.cos(th)*(drift);
+        const y=base.y+Math.sin(th)*(drift*0.82);
+        const rot=CONFIG.swayDeg*Math.sin(t*0.9+phase);
+        const s=CONFIG.baseScale*(1+CONFIG.pulse*Math.sin(t*0.8+phase+idx*0.15));
+        setT(f,x,y,s,rot);
+      });
+      requestAnimationFrame(tick);
+    }
+
+    // basic smoke tests, will log to console
+    function runTests(){
+      const results=[]; const ok=(n,c)=>results.push({n,pass:!!c});
+      ok('defs exist', !!document.querySelector('#scene defs'));
+      ok('gradient stops=3', document.querySelectorAll('#scene defs #petalGrad stop').length===3);
+      ok('hyphenated attr present', !!document.querySelector('#scene defs stop')?.getAttribute('stop-color'));
+      ok('flower count correct', document.querySelectorAll('#scene .flower').length===CONFIG.count);
+      const failed=results.filter(r=>!r.pass); if(failed.length){console.group('Sofia Flowers tests'); results.forEach(r=>console[r.pass?'log':'error'](`${r.pass?'✔':'✖'} ${r.n}`)); console.groupEnd()} else {console.log('✔ Sofia Flowers tests passed')}
+    }
+
+    // init
+    setup();
+    requestAnimationFrame(tick);
+    requestAnimationFrame(()=>setTimeout(runTests,50));
+
+    // small conveniences
+    window.addEventListener('keydown',e=>{ if(e.code==='Space'){ // pause toggle
+      if(window.__paused){window.__paused=false; requestAnimationFrame(tick)} else {window.__paused=true; const _tick=tick; tick=function(){}; setTimeout(()=>{tick=_tick},0)}
+    }});
+  </script>
+</body>
+</html>
